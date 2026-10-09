@@ -32,7 +32,7 @@ README.md
 - `requestAnimationFrame`; fixed step 1/60 s with accumulator (cap 5 steps per frame).
 - Condor: `vy += 0.35` per step, flap sets `vy = -5.2`, clamp `vy ≤ 8`. Horizontal position fixed at x=70. Hitbox: 20×16 box centred on the body (smaller than the sprite so wingtips don't kill).
 - Scroll speed 2.0 px/step, +0.1 every 10 points, cap 3.5. Far mountains scroll at 0.25×, clouds 0.15×, ground 1×.
-- Input: pointer down anywhere, Space, ArrowUp. Same handler drives title → play, flap, game-over confirm.
+- Input is dispatched per state. `title`: any pointer down / Space / ArrowUp → play. `play`: same keys → flap. `gameover`: ArrowUp/ArrowDown or tap on the upper/lower half of the active letter → cycle letter; Space/Enter or tap anywhere else → advance; Esc or tap on a small `SKIP` label → skip posting. `table`: any tap/key → play.
 - Flap animation: show `flap` frame for 7 steps after each tap, else `glide`.
 
 ## Obstacles
@@ -59,24 +59,24 @@ ULTRA  --(hit ground)--> gameover
 
 ## Screens / state machine
 
-`title → play → gameover → table → title(play)`
+`title → play → gameover → table → play` (title is shown only on first load)
 
 - **title**: animated — sun rays rotate+pulse, two far-mountain layers drift (6 and 12 px/s), four clouds drift at different speeds and bob, ground stripes scroll, condor at 3× bobs (sin, ±6 px) and idle-flaps every 1.2 s, "TAP / SPACE TO FLY" blinks. Tap → play.
 - **play**: HUD top-left: `SCORE n`, five 9×9 coin slots (filled = collected), `ULTRA ANDES` label in pink when active.
-- **gameover**: dim overlay; `GAME OVER`, `SCORE n`, `BEST n` (localStorage `condor.best`); 3-letter name entry: ArrowUp/Down (or tap upper/lower half of the active letter) cycles A–Z then 0–9, Tap/Space/Enter advances, after the 3rd letter the score is POSTed; Esc skips posting. Last name is remembered in localStorage `condor.name` and pre-filled.
-- **table**: `TOP CONDORES`, top 10 `rank name score`, the player's row in cyan if present, `TAP TO FLY AGAIN`. If the fetch fails, show the local best only with "OFFLINE".
+- **gameover**: dim overlay; `GAME OVER`, `SCORE n`, `BEST n` (localStorage `condor.best`); 3-letter name entry: ArrowUp/Down (or tap upper/lower half of the active letter) cycles A–Z then 0–9, Tap/Space/Enter advances, after the 3rd letter the score is POSTed; Esc or the `SKIP` label skips posting. If score is 0, name entry is skipped and the table is shown directly. Last name is remembered in localStorage `condor.name` and pre-filled.
+- **table**: `TOP CONDORES`, top 10 `rank name score`, the player's row in cyan (first row equal to the just-posted `{name, score}`), `TAP TO FLY AGAIN`. If the fetch fails, show the local best only with "OFFLINE".
 
 ## Leaderboard API
 
 `functions/api/scores.js` on Cloudflare Pages, KV namespace binding `SCORES`, single key `top`.
 
 - `GET /api/scores` → `[{name, score}]` top 10, sorted desc. Cache-Control `no-store`.
-- `POST /api/scores` JSON `{name, score}`. Validate: name after `toUpperCase().replace(/[^A-Z0-9]/g,'')` is 1–3 chars; score integer 1–9999. Reject otherwise (400). Read `top`, push, sort desc, slice 10, write back, return new top 10.
+- `POST /api/scores` JSON `{name, score}`. Validate: name after `toUpperCase().replace(/[^A-Z0-9]/g,'')` is 1–3 chars; score integer 1–9999. Reject otherwise (400). Read `top`, push, stable sort desc by score (ties keep insertion order, so earlier entries rank first), slice 10, write back, return new top 10.
 - Same-origin only; no auth (hackathon). `ponytail:` KV read-modify-write can race under simultaneous posts; acceptable for this scale, move to Durable Object if it matters.
 
 ## Deploy
 
-- `wrangler pages project create condor-andes`, `wrangler kv namespace create SCORES`, binding in `wrangler.toml`, `wrangler pages deploy .`.
+- `wrangler pages project create condor-andes`, `wrangler kv namespace create SCORES`, binding in `wrangler.toml` with `pages_build_output_dir = "."`, `wrangler pages deploy`. `docs/` gets uploaded as static assets too; harmless.
 - Pages serves `index.html`, `game.js`, `sprites.js` statically; `functions/` becomes the API.
 
 ## Testing
