@@ -75,11 +75,14 @@ function hitRock() {
   if (invul > 0) return;
   if (mode === 'ultra') { mode = 'normal'; coins = 0; invul = 1; } else gameOver();
 }
-function gameOver() {
-  state = 'gameover'; mode = 'normal'; banner = 0; flash = 0; wait = 0.5;
+function gameOver() { // fatal hit: flash, the condor drops with no input (<= 0.6 s), then endScreen()
+  state = 'dead'; mode = 'normal'; banner = 0; flash = 0.15; wait = 0.6;
   if (score > best) { best = score; ls.set('best', best); }
+}
+function endScreen() {
+  wait = 0.5;
   if (score === 0) return showTable(null);
-  letters = [...(ls.get('name') || 'AAA').padEnd(3, 'A')].slice(0, 3); idx = 0;
+  state = 'gameover'; letters = [...(ls.get('name') || 'AAA').padEnd(3, 'A')].slice(0, 3); idx = 0;
 }
 async function showTable(entry) { // top: undefined = loading, null = offline, array = data
   state = 'table'; top = undefined; mine = entry;
@@ -102,6 +105,11 @@ function step() {
   if (invul > 0) invul -= 1 / 60;
   if (wait > 0) wait -= 1 / 60;
   if (state === 'ready') y = GROUND / 2 - 16 + Math.sin(t * 4) * 3;
+  if (state === 'dead') {
+    vy = Math.min(vy + 0.35, 8); y += vy;
+    if (y + 24 >= GROUND) { y = GROUND - 24; vy = 0; wait = Math.min(wait, 0.1); }
+    if (wait <= 0) endScreen();
+  }
   if (state !== 'play') return;
 
   vy = Math.min(vy + 0.35, 8); y += vy;
@@ -199,7 +207,7 @@ function drawTable() {
       text(String(e.score), W / 2 + 70, o + 44 + i * 13, col, 8, 'right');
     });
   }
-  if (t % 1 < 0.6) text('TAP TO FLY AGAIN', W / 2, o + 190, '#fff', 6);
+  if (top !== undefined && t % 1 < 0.6) text('TAP TO FLY AGAIN', W / 2, o + 190, '#fff', 6);
 }
 function draw() {
   const u = mode === 'ultra', th = THEME[u ? 'ultra' : 'normal'];
