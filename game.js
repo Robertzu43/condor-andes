@@ -26,7 +26,7 @@ const ls = { get: k => localStorage.getItem('condor.' + k), set: (k, v) => local
 
 // ---- state ----
 let state = 'title', mode = 'normal', t = 0, dist = 0, frame = 0;
-let y, vy, flapT, invul, speed, score, coins, pairs, nth, flash, banner;
+let y, vy, flapT, invul, speed, score, coins, pairs, nth, flash, banner, wait = 0; // wait: seconds of ignored input
 let best = +ls.get('best') || 0, letters, idx, top, mine;
 addEventListener('resize', fit); fit();
 const clouds = [[0, 32, 2, 8], [160, 20, 2, 5], [250, 56, 2, 11], [340, 24, 1, 14]].map(([x, y, s, v]) => ({ x: x % W, y, s, v }));
@@ -76,7 +76,7 @@ function hitRock() {
   if (mode === 'ultra') { mode = 'normal'; coins = 0; invul = 1; } else gameOver();
 }
 function gameOver() {
-  state = 'gameover';
+  state = 'gameover'; mode = 'normal'; banner = 0; flash = 0; wait = 0.5;
   if (score > best) { best = score; ls.set('best', best); }
   if (score === 0) return showTable(null);
   letters = [...(ls.get('name') || 'AAA').padEnd(3, 'A')].slice(0, 3); idx = 0;
@@ -100,6 +100,7 @@ function step() {
   if (flash > 0) flash -= 1 / 60;
   if (banner > 0) banner -= 1 / 60;
   if (invul > 0) invul -= 1 / 60;
+  if (wait > 0) wait -= 1 / 60;
   if (state === 'ready') y = GROUND / 2 - 16 + Math.sin(t * 4) * 3;
   if (state !== 'play') return;
 
@@ -231,6 +232,7 @@ function draw() {
 function cycle(d) { letters[idx] = LETTERS[(LETTERS.indexOf(letters[idx]) + d + LETTERS.length) % LETTERS.length]; }
 function advance() { if (++idx < 3) return; const name = letters.join(''); ls.set('name', name); showTable({ name, score }); }
 function tap(gx, gy) {
+  if (wait > 0) return;
   if (state === 'title') startPlay();
   else if (state === 'table') { if (top !== undefined) startPlay(); }
   else if (state === 'ready' || state === 'play') {
@@ -248,6 +250,7 @@ addEventListener('pointerdown', e => { e.preventDefault(); const r = cv.getBound
 addEventListener('keydown', e => {
   if (e.repeat || !['Space', 'ArrowUp', 'ArrowDown', 'Enter', 'Escape'].includes(e.code)) return;
   e.preventDefault();
+  if (wait > 0) return;
   if (state === 'gameover') {
     if (e.code === 'ArrowUp') cycle(1); else if (e.code === 'ArrowDown') cycle(-1);
     else if (e.code === 'Escape') showTable(null); else advance();
