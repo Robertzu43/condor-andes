@@ -26,24 +26,24 @@ const ls = { get: k => localStorage.getItem('condor.' + k), set: (k, v) => local
 
 // ---- state ----
 let state = 'title', mode = 'normal', t = 0, dist = 0, frame = 0;
-let y, vy, flapT, invul, speed, score, coins, pairs, flash, banner;
+let y, vy, flapT, invul, speed, score, coins, pairs, nth, flash, banner;
 let best = +ls.get('best') || 0, letters, idx, top, mine;
 addEventListener('resize', fit); fit();
 const clouds = [[0, 32, 2, 8], [160, 20, 2, 5], [250, 56, 2, 11], [340, 24, 1, 14]].map(([x, y, s, v]) => ({ x: x % W, y, s, v }));
 
 function startPlay() { // 'ready': hover with the world scrolling until the first tap, which becomes the first flap
   state = 'ready'; mode = 'normal';
-  y = GROUND / 2 - 16; vy = 0; flapT = 0; invul = 0; speed = 2; score = 0; coins = 0; pairs = []; flash = 0; banner = 0;
+  y = GROUND / 2 - 16; vy = 0; flapT = 0; invul = 0; speed = 2; score = 0; coins = 0; pairs = []; nth = 1; flash = 0; banner = 0;
 }
 
 // ---- mountains ----
-function ridge(h, hw) { // half-width per row, from the base up; jagged random walk
+function ridge(h, hw) { // half-width per row, from the base up; random walk on the base width, tapered so the tip never grows a needle
   const rows = []; let j = 0;
-  for (let i = 0; i < h; i++) { j += rnd(-0.8, 0.8); rows.push(Math.max(1, Math.round(hw * (h - i) / h) + (j | 0))); }
+  for (let i = 0; i < h; i++) { j += rnd(-0.8, 0.8); rows.push(Math.max(1, Math.round((hw + j) * (h - i) / h))); }
   return rows;
 }
-function spawnPair(x) {
-  const gap = rnd(58, 74) | 0, gapY = rnd(16, GROUND - 16 - gap) | 0, hw = rnd(18, 32) | 0;
+function spawnPair(x) { // gap 92 for the first three pairs, then -2.5 per pair down to 64
+  const gap = Math.round(Math.max(64, 92 - 2.5 * Math.max(0, nth++ - 3)) + rnd(0, 6)), gapY = rnd(16, GROUND - 16 - gap) | 0, hw = rnd(18, 32) | 0;
   pairs.push({ x, gap, gapY, hw, bot: ridge(GROUND - gapY - gap, hw), top: ridge(gapY, hw), next: rnd(90, 155) | 0, coin: true, passed: false });
 }
 function drawMountain(th, x, rows, flip) {
@@ -59,7 +59,7 @@ const hitbox = () => ({ x: CX + 2, y: y + 10, w: 20, h: 14 });
 const overlap = (a, b) => a.x < b.x + b.w && a.x + a.w > b.x && a.y < b.y + b.h && a.y + a.h > b.y;
 function hitsMountain(p, hb) {
   if (Math.abs(p.x - (hb.x + hb.w / 2)) > p.hw + 20) return false;
-  const row = (w, ry) => overlap(hb, { x: p.x - w, y: ry, w: 2 * w, h: 1 });
+  const row = (w, ry) => w > 2 && overlap(hb, { x: p.x - w, y: ry, w: 2 * w, h: 1 }); // the 1-2 px tips are not lethal
   return p.bot.some((w, i) => row(w, GROUND - 1 - i)) || p.top.some((w, i) => row(w, i));
 }
 
@@ -262,4 +262,9 @@ function loop(now) {
 requestAnimationFrame(loop);
 
 // QA hook: only when the page is opened with #debug
-if (location.hash === '#debug') window.condor = { startPlay, enterUltra, gameOver, get state() { return state; }, get mode() { return mode; }, get score() { return score; } };
+if (location.hash === '#debug') {
+  window.condor = { startPlay, enterUltra, gameOver };
+  const peek = { state: () => state, mode: () => mode, score: () => score, y: () => y, vy: () => vy, invul: () => invul, flash: () => flash, banner: () => banner, coins: () => coins,
+    pairs: () => pairs, top: () => top, letters: () => letters, idx: () => idx, best: () => best, frame: () => frame, W: () => W, H: () => H };
+  for (const k in peek) Object.defineProperty(window.condor, k, { get: peek[k] });
+}
