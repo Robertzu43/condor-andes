@@ -1,17 +1,25 @@
 import { GLIDE, FLAP, COIN, PAL, OUTLINE, THEME, drawSprite } from './sprites.js';
 
-const W = 384, H = 216, GROUND = 192, CX = 70, STEP = 1000 / 60;
+const STEP = 1000 / 60;
 const LETTERS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
 const cv = document.getElementById('g');
-cv.width = W; cv.height = H;
 const ctx = cv.getContext('2d');
-ctx.imageSmoothingEnabled = false;
 
+// Logical playfield follows the screen: portrait 216 wide, landscape 384 wide, height from the aspect ratio.
+let W = 384, H = 216, GROUND = 192, CX = 70, scale = 1, SAT = 0, SAL = 0, SAB = 0;
 function fit() {
-  const s = Math.max(1, Math.floor(Math.min(innerWidth / W, innerHeight / H)));
-  cv.style.width = W * s + 'px'; cv.style.height = H * s + 'px';
+  const iw = innerWidth, ih = innerHeight, portrait = ih > iw;
+  W = portrait ? 216 : 384; CX = portrait ? 56 : 70;
+  H = portrait ? Math.min(480, Math.max(216, Math.round(216 * ih / iw))) : Math.min(216, Math.max(176, Math.round(384 * ih / iw)));
+  GROUND = H - 24;
+  const s = Math.min(iw / W, ih / H);
+  scale = matchMedia('(pointer:coarse)').matches ? s : Math.floor(s) || s; // phones fill the screen, desktops keep integer pixels
+  cv.width = W; cv.height = H; ctx.imageSmoothingEnabled = false;
+  cv.style.width = W * scale + 'px'; cv.style.height = H * scale + 'px';
+  const sa = k => (parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--sa' + k)) || 0) / scale;
+  SAT = sa('t'); SAL = sa('l'); SAB = sa('b');
+  if (state === 'play') { pairs.length = 0; y = Math.min(y, GROUND - 40); } // rotating mid-game: new field, no death
 }
-addEventListener('resize', fit); fit();
 
 const rnd = (a, b) => a + Math.random() * (b - a);
 const ls = { get: k => localStorage.getItem('condor.' + k), set: (k, v) => localStorage.setItem('condor.' + k, v) };
@@ -20,11 +28,12 @@ const ls = { get: k => localStorage.getItem('condor.' + k), set: (k, v) => local
 let state = 'title', mode = 'normal', t = 0, dist = 0, frame = 0;
 let y, vy, flapT, invul, speed, score, coins, pairs, flash, banner;
 let best = +ls.get('best') || 0, letters, idx, top, mine;
-const clouds = [[0, 32, 2, 8], [160, 20, 2, 5], [250, 56, 2, 11], [340, 24, 1, 14]].map(([x, y, s, v]) => ({ x, y, s, v }));
+addEventListener('resize', fit); fit();
+const clouds = [[0, 32, 2, 8], [160, 20, 2, 5], [250, 56, 2, 11], [340, 24, 1, 14]].map(([x, y, s, v]) => ({ x: x % W, y, s, v }));
 
 function startPlay() {
   state = 'play'; mode = 'normal';
-  y = 90; vy = 0; flapT = 0; invul = 0; speed = 2; score = 0; coins = 0; pairs = []; flash = 0; banner = 0;
+  y = GROUND / 2 - 16; vy = 0; flapT = 0; invul = 0; speed = 2; score = 0; coins = 0; pairs = []; flash = 0; banner = 0;
 }
 
 // ---- mountains ----
@@ -128,12 +137,13 @@ function drawCloud(th, x, yy, s) {
 function drawBg(th, u) {
   const g = ctx.createLinearGradient(0, 0, 0, H); g.addColorStop(0, th.sky0); g.addColorStop(1, th.sky1);
   ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
-  if (u) { circle(320, 160, 48, th.sun, true); circle(320, 160, 38, th.sunCore, true); }
+  const sx = W - 64;
+  if (u) { circle(sx, GROUND - 32, 48, th.sun, true); circle(sx, GROUND - 32, 38, th.sunCore, true); }
   else {
-    circle(320, 48, 21, th.sun); circle(320, 48, 15, th.sunCore); ctx.fillStyle = th.sun;
+    circle(sx, 48, 21, th.sun); circle(sx, 48, 15, th.sunCore); ctx.fillStyle = th.sun;
     for (let a = 0; a < 8; a++) {
       const ang = a * Math.PI / 4 + t * 0.4, len = 4 + Math.sin(t * 3 + a) * 2;
-      for (let r = 24; r < 27 + len; r++) ctx.fillRect(320 + Math.cos(ang) * r | 0, 48 + Math.sin(ang) * r | 0, 1, 1);
+      for (let r = 24; r < 27 + len; r++) ctx.fillRect(sx + Math.cos(ang) * r | 0, 48 + Math.sin(ang) * r | 0, 1, 1);
     }
   }
   layer(th.far2, 70, 55, 60, 50, 0.2); layer(th.far, 55, 45, 30, 35, 0.35);
@@ -163,36 +173,38 @@ function text(s, x, yy, col, size = 8, align = 'center') {
   ctx.font = `${size}px "Press Start 2P", monospace`; ctx.fillStyle = col; ctx.textAlign = align; ctx.textBaseline = 'top'; ctx.fillText(s, x, yy);
 }
 function dim() { ctx.fillStyle = 'rgba(0,0,0,.55)'; ctx.fillRect(0, 0, W, H); }
+const oy = () => (H - 216) / 2 | 0; // panels are laid out for 216 rows and centred vertically
 function drawGameOver() {
-  dim();
-  text('GAME OVER', W / 2, 30, '#ff2a6d', 16); text('SCORE  ' + score, W / 2, 60, '#fff'); text('BEST   ' + best, W / 2, 74, '#ffd93b');
-  text('ENTER YOUR NAME', W / 2, 100, '#fff', 6);
-  letters.forEach((ch, i) => { const x = W / 2 - 36 + i * 30, col = i === idx ? '#ffd93b' : '#fff'; ctx.fillStyle = col; ctx.fillRect(x - 10, 140, 22, 2); text(ch, x + 1, 118, col, 16); });
-  text('UP/DOWN LETTER   TAP NEXT', W / 2, 160, '#aaa', 6); text('SKIP', W / 2, 176, '#aaa', 6);
+  dim(); const o = oy();
+  text('GAME OVER', W / 2, o + 30, '#ff2a6d', 16); text('SCORE  ' + score, W / 2, o + 60, '#fff'); text('BEST   ' + best, W / 2, o + 74, '#ffd93b');
+  text('ENTER YOUR NAME', W / 2, o + 100, '#fff', 6);
+  letters.forEach((ch, i) => { const x = W / 2 - 36 + i * 30, col = i === idx ? '#ffd93b' : '#fff'; ctx.fillStyle = col; ctx.fillRect(x - 10, o + 140, 22, 2); text(ch, x + 1, o + 118, col, 16); });
+  text('UP/DOWN LETTER   TAP NEXT', W / 2, o + 160, '#aaa', 6); text('SKIP', W / 2, o + 176, '#aaa', 6);
 }
 function drawTable() {
-  dim();
-  text('TOP CONDORES', W / 2, 16, '#ffd93b', 12);
-  if (top === undefined) text('LOADING...', W / 2, 100, '#fff');
-  else if (top === null) { text('OFFLINE', W / 2, 90, '#ff2a6d'); text('BEST ' + best, W / 2, 110, '#fff'); }
+  dim(); const o = oy();
+  text('TOP CONDORES', W / 2, o + 16, '#ffd93b', 12);
+  if (top === undefined) text('LOADING...', W / 2, o + 100, '#fff');
+  else if (top === null) { text('OFFLINE', W / 2, o + 90, '#ff2a6d'); text('BEST ' + best, W / 2, o + 110, '#fff'); }
   else {
     let hl = -1;
     top.forEach((e, i) => {
       const me = hl < 0 && mine && e.name === mine.name && e.score === mine.score; if (me) hl = i;
       const col = me ? '#00f0ff' : '#fff';
-      text(String(i + 1).padStart(2, ' ') + '  ' + e.name, W / 2 - 70, 44 + i * 13, col, 8, 'left');
-      text(String(e.score), W / 2 + 70, 44 + i * 13, col, 8, 'right');
+      text(String(i + 1).padStart(2, ' ') + '  ' + e.name, W / 2 - 70, o + 44 + i * 13, col, 8, 'left');
+      text(String(e.score), W / 2 + 70, o + 44 + i * 13, col, 8, 'right');
     });
   }
-  if (t % 1 < 0.6) text('TAP TO FLY AGAIN', W / 2, 190, '#fff', 6);
+  if (t % 1 < 0.6) text('TAP TO FLY AGAIN', W / 2, o + 190, '#fff', 6);
 }
 function draw() {
   const u = mode === 'ultra', th = THEME[u ? 'ultra' : 'normal'];
   drawBg(th, u);
   if (state === 'title') {
-    drawCondor(th, W / 2 - 48, (40 + Math.sin(t * 2) * 6) | 0, (t % 1.2) < 0.15 ? FLAP : GLIDE, 3);
-    text('CÓNDOR', W / 2, 130, '#fff', 16); text('DE LOS ANDES', W / 2, 150, '#ffd93b', 8);
-    if (t % 1 < 0.6) text('TAP / SPACE TO FLY', W / 2, 178, '#fff', 6);
+    const o = oy();
+    drawCondor(th, W / 2 - 48, (o + 40 + Math.sin(t * 2) * 6) | 0, (t % 1.2) < 0.15 ? FLAP : GLIDE, 3);
+    text('CÓNDOR', W / 2, o + 130, '#fff', 16); text('DE LOS ANDES', W / 2, o + 150, '#ffd93b', 8);
+    if (t % 1 < 0.6) text('TAP / SPACE TO FLY', W / 2, o + 178, '#fff', 6);
   } else {
     pairs.forEach(p => {
       const px = p.x | 0;
@@ -200,9 +212,10 @@ function draw() {
       if (p.coin) drawSprite(ctx, COIN, PAL[u ? 'ultra' : 'normal'], px - 6, (p.gapY + p.gap / 2 - 6) | 0);
     });
     if (!(invul > 0 && (frame >> 2) & 1)) drawCondor(th, CX, y | 0, flapT > 0 ? FLAP : GLIDE);
-    text('SCORE ' + score, 8, 8, th.hud, 8, 'left');
-    for (let i = 0; i < 5; i++) { ctx.fillStyle = i < coins ? PAL.normal.y : 'rgba(255,255,255,.25)'; ctx.fillRect(8 + i * 12, 22, 9, 9); }
-    if (u) text('ULTRA ANDES', 8, 38, '#ff2a6d', 8, 'left');
+    const hx = 8 + SAL | 0, hy = 8 + SAT | 0;
+    text('SCORE ' + score, hx, hy, th.hud, 8, 'left');
+    for (let i = 0; i < 5; i++) { ctx.fillStyle = i < coins ? PAL.normal.y : 'rgba(255,255,255,.25)'; ctx.fillRect(hx + i * 12, hy + 14, 9, 9); }
+    if (u) text('ULTRA ANDES', hx, hy + 30, '#ff2a6d', 8, 'left');
   }
   if (u) { ctx.fillStyle = 'rgba(0,0,0,.22)'; for (let sy = 0; sy < H; sy += 2) ctx.fillRect(0, sy, W, 1); }
   if (flash > 0) { ctx.fillStyle = `rgba(255,255,255,${flash / 0.4})`; ctx.fillRect(0, 0, W, H); }
@@ -218,13 +231,13 @@ function tap(gx, gy) {
   else if (state === 'table') { if (top !== undefined) startPlay(); }
   else if (state === 'play') { vy = -5.2; flapT = 7; }
   else if (state === 'gameover') {
-    const lx = W / 2 - 36 + idx * 30 + 1;
-    if (gy > 170 && Math.abs(gx - W / 2) < 24) return showTable(null);
-    if (Math.abs(gx - lx) < 12 && gy > 110 && gy < 142) return cycle(gy < 126 ? 1 : -1);
+    const lx = W / 2 - 36 + idx * 30 + 1, o = oy();
+    if (gy > o + 170 && Math.abs(gx - W / 2) < 24) return showTable(null);
+    if (Math.abs(gx - lx) < 12 && gy > o + 110 && gy < o + 142) return cycle(gy < o + 126 ? 1 : -1);
     advance();
   }
 }
-cv.addEventListener('pointerdown', e => { e.preventDefault(); tap(e.offsetX / cv.clientWidth * W, e.offsetY / cv.clientHeight * H); });
+addEventListener('pointerdown', e => { e.preventDefault(); const r = cv.getBoundingClientRect(); tap((e.clientX - r.x) / r.width * W, (e.clientY - r.y) / r.height * H); });
 addEventListener('keydown', e => {
   if (e.repeat || !['Space', 'ArrowUp', 'ArrowDown', 'Enter', 'Escape'].includes(e.code)) return;
   e.preventDefault();
