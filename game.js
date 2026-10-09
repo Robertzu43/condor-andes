@@ -2,6 +2,7 @@ import { GLIDE, FLAP, COIN, PAL, OUTLINE, THEME, drawSprite } from './sprites.js
 
 const STEP = 1000 / 60;
 const LETTERS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+const SLOT = { y: 'rgba(0,0,0,.45)', o: 'rgba(0,0,0,.45)' }; // empty HUD coin slot
 const cv = document.getElementById('g');
 const ctx = cv.getContext('2d');
 
@@ -249,11 +250,15 @@ function draw() {
       if (p.coin) drawSprite(ctx, COIN, PAL[u ? 'ultra' : 'normal'], px - 6, (p.gapY + p.gap / 2 - 6) | 0);
     });
     if (!(invul > 0 && (frame >> 2) & 1)) drawCondor(th, CX, y | 0, flapT > 0 ? FLAP : GLIDE);
-    const hx = 8 + SAL | 0, hy = 8 + SAT | 0;
-    text('PUNTOS ' + score, hx, hy, th.hud, 8, 'left');
-    for (let i = 0; i < 5; i++) { ctx.globalAlpha = i < coins ? 1 : 0.3; drawSprite(ctx, COIN, PAL[u ? 'ultra' : 'normal'], hx + i * 14, hy + 13); }
-    ctx.globalAlpha = 1; text('ULTRA', hx + 72, hy + 16, th.hud, 6, 'left');
-    if (u) text('ULTRA ANDES', hx, hy + 30, '#ff2a6d', 8, 'left');
+    if (state !== 'gameover' && state !== 'table') { // HUD, with a 1-px shadow so clouds never wash it out
+      const hx = 8 + SAL | 0, hy = 8 + SAT | 0;
+      ctx.save(); ctx.shadowColor = '#000'; ctx.shadowOffsetX = ctx.shadowOffsetY = 1;
+      text('PUNTOS ' + score, hx, hy, th.hud, 8, 'left');
+      for (let i = 0; i < 5; i++) drawSprite(ctx, COIN, i < coins ? PAL[u ? 'ultra' : 'normal'] : SLOT, hx + i * 14, hy + 13);
+      text('ULTRA', hx + 72, hy + 16, th.hud, 6, 'left');
+      if (u) text('ULTRA ANDES', hx, hy + 30, '#ff2a6d', 8, 'left');
+      ctx.restore();
+    }
     if (state === 'ready') {
       if (t % 1 < 0.6) text('TOCA PARA VOLAR', W / 2, GROUND / 2 + 40, '#fff', 8);
       text('5 MONEDAS = ULTRA ANDES', W / 2, GROUND / 2 + 56, '#ffd93b', 6);
