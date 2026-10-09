@@ -4,4 +4,4 @@ pages_build_output_dir = "."
 
 [[kv_namespaces]]
 binding = "SCORES"
-id = "REPLACE_ME"
+id = "37bf007b13074d738e15826d3802da64"
