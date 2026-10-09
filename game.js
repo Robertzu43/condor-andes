@@ -26,7 +26,7 @@ const ls = { get: k => localStorage.getItem('condor.' + k), set: (k, v) => local
 
 // ---- state ----
 let state = 'title', mode = 'normal', t = 0, dist = 0, frame = 0;
-let y, vy, flapT, invul, speed, score, coins, pairs, nth, flash, banner, wait = 0; // wait: seconds of ignored input
+let y, vy, flapT, invul, speed, score, coins, pairs, nth, flash, flashRGB, banner, bannerLost, wait = 0; // wait: seconds of ignored input
 let best = +ls.get('best') || 0, letters, idx, top, mine;
 addEventListener('resize', fit); fit();
 const clouds = [[0, 32, 2, 8], [160, 20, 2, 5], [250, 56, 2, 11], [340, 24, 1, 14]].map(([x, y, s, v]) => ({ x: x % W, y, s, v }));
@@ -67,16 +67,16 @@ function hitsMountain(p, hb) {
 
 // ---- modes / flow ----
 function enterUltra() {
-  coins = 0;
+  coins = 0; flashRGB = '255,255,255';
   if (mode === 'ultra') { flash = 0.15; return; }
-  mode = 'ultra'; flash = 0.4; banner = 1.1;
+  mode = 'ultra'; flash = 0.4; banner = 1.1; bannerLost = false;
 }
 function hitRock() {
   if (invul > 0) return;
-  if (mode === 'ultra') { mode = 'normal'; coins = 0; invul = 1; } else gameOver();
+  if (mode === 'ultra') { mode = 'normal'; coins = 0; invul = 1; banner = 0.8; bannerLost = true; flash = 0.25; flashRGB = '255,42,109'; } else gameOver();
 }
 function gameOver() { // fatal hit: flash, the condor drops with no input (<= 0.6 s), then endScreen()
-  state = 'dead'; mode = 'normal'; banner = 0; flash = 0.15; wait = 0.6;
+  state = 'dead'; mode = 'normal'; banner = 0; flash = 0.15; flashRGB = '255,255,255'; wait = 0.6;
   if (score > best) { best = score; ls.set('best', best); }
 }
 function endScreen() {
@@ -216,7 +216,8 @@ function draw() {
     const o = oy();
     drawCondor(th, W / 2 - 48, (o + 40 + Math.sin(t * 2) * 6) | 0, (t % 1.2) < 0.15 ? FLAP : GLIDE, 3);
     text('CÓNDOR', W / 2, o + 130, '#fff', 16); text('DE LOS ANDES', W / 2, o + 150, '#ffd93b', 8);
-    if (t % 1 < 0.6) text('TAP / SPACE TO FLY', W / 2, o + 178, '#fff', 6);
+    text('5 MONEDAS = ULTRA ANDES', W / 2, o + 166, '#fff', 6);
+    if (t % 1 < 0.6) text('TAP / SPACE TO FLY', W / 2, o + 182, '#fff', 6);
   } else {
     pairs.forEach(p => {
       const px = p.x | 0;
@@ -226,13 +227,18 @@ function draw() {
     if (!(invul > 0 && (frame >> 2) & 1)) drawCondor(th, CX, y | 0, flapT > 0 ? FLAP : GLIDE);
     const hx = 8 + SAL | 0, hy = 8 + SAT | 0;
     text('SCORE ' + score, hx, hy, th.hud, 8, 'left');
-    for (let i = 0; i < 5; i++) { ctx.fillStyle = i < coins ? PAL.normal.y : 'rgba(255,255,255,.25)'; ctx.fillRect(hx + i * 12, hy + 14, 9, 9); }
+    for (let i = 0; i < 5; i++) { ctx.globalAlpha = i < coins ? 1 : 0.3; drawSprite(ctx, COIN, PAL[u ? 'ultra' : 'normal'], hx + i * 14, hy + 13); }
+    ctx.globalAlpha = 1; text('ULTRA', hx + 72, hy + 16, th.hud, 6, 'left');
     if (u) text('ULTRA ANDES', hx, hy + 30, '#ff2a6d', 8, 'left');
-    if (state === 'ready' && t % 1 < 0.6) text('TAP TO FLY', W / 2, GROUND / 2 + 40, '#fff', 8);
+    if (state === 'ready') {
+      if (t % 1 < 0.6) text('TAP TO FLY', W / 2, GROUND / 2 + 40, '#fff', 8);
+      text('5 MONEDAS = ULTRA ANDES', W / 2, GROUND / 2 + 56, '#ffd93b', 6);
+    }
   }
   if (u) { ctx.fillStyle = 'rgba(0,0,0,.22)'; for (let sy = 0; sy < H; sy += 2) ctx.fillRect(0, sy, W, 1); }
-  if (flash > 0) { ctx.fillStyle = `rgba(255,255,255,${flash / 0.4})`; ctx.fillRect(0, 0, W, H); }
-  if (banner > 0) { const k = Math.min(1, (1.1 - banner) / 0.25); text('ULTRA ANDES', W / 2, (H / 2 - 8 - (1 - k) * 20) | 0, '#ff2a6d', 16); text('x2 SCORE', W / 2, H / 2 + 14, '#00f0ff', 8); }
+  if (flash > 0) { ctx.fillStyle = `rgba(${flashRGB},${flash / 0.4})`; ctx.fillRect(0, 0, W, H); }
+  if (banner > 0 && bannerLost) text('ULTRA PERDIDO', W / 2, H / 2 - 6, '#ff2a6d', 12);
+  else if (banner > 0) { const k = Math.min(1, (1.1 - banner) / 0.25); text('ULTRA ANDES', W / 2, (H / 2 - 8 - (1 - k) * 20) | 0, '#ff2a6d', 16); text('x2 SCORE', W / 2, H / 2 + 14, '#00f0ff', 8); }
   if (state === 'gameover') drawGameOver(); else if (state === 'table') drawTable();
 }
 
