@@ -243,6 +243,7 @@ function draw() {
     text('DE LOS ANDES', W / 2, o + 150, '#ffd93b', 8);
     if (best > 0) text('MEJOR: ' + best, W / 2, o + 164, '#ffd93b', 6);
     text('5 MONEDAS = ULTRA ANDES', W / 2, o + 174, '#fff', 6);
+    text('HACK THE ANDES · LIMA', W / 2, o + 198, '#ffd93b', 6);
     if (t % 1 < 0.6) text('TOCA PARA VOLAR', W / 2, o + 186, '#fff', 6);
   } else {
     pairs.forEach(p => {

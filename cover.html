@@ -27,7 +27,8 @@ if (kind === 'cover') {
   px(GLIDE, PAL.normal, 600 - 16 * 9 + 20, 215 - 16 * 9 + 30, 9);
   // title: CONDOR + painted accent (font has no Ó)
   text('CONDOR', 600, 440, 72, '#ffffff', '#1a1a1a'); ctx.fillStyle = '#1a1a1a'; ctx.fillRect(492, 427, 12, 9); ctx.fillRect(501, 418, 12, 9); ctx.fillStyle = '#ffffff'; ctx.fillRect(483, 427, 12, 9); ctx.fillRect(492, 418, 12, 9);
-  text('DE LOS ANDES', 600, 530, 30, t.sun, '#1a1a1a');
+  text('DE LOS ANDES', 600, 518, 30, t.sun, '#1a1a1a');
+  text('UN JUEGO PARA HACK THE ANDES · LIMA', 600, 566, 14, '#ffffff', '#1a1a1a');
 } else {
   // logo badge: sun disc + condor on a 48-px grid, upscaled nearest-neighbour (favicon / apple-touch-icon / logo.png)
   c.width = c.height = size; const off = document.createElement('canvas'); off.width = off.height = 48; const o = off.getContext('2d');
