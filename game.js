@@ -18,7 +18,7 @@ function fit() {
   cv.style.width = W * scale + 'px'; cv.style.height = H * scale + 'px';
   const sa = k => (parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--sa' + k)) || 0) / scale;
   SAT = sa('t'); SAL = sa('l'); SAB = sa('b');
-  if (state === 'play') { pairs.length = 0; y = Math.min(y, GROUND - 40); } // rotating mid-game: new field, no death
+  if (state === 'play') { pairs.length = 0; state = 'ready'; } // rotating mid-game: hover until the next tap, score kept, never a death
 }
 
 const rnd = (a, b) => a + Math.random() * (b - a);
