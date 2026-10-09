@@ -275,7 +275,7 @@ function draw() {
 function cycle(d) { letters[idx] = LETTERS[(LETTERS.indexOf(letters[idx]) + d + LETTERS.length) % LETTERS.length]; }
 function advance() { if (++idx < 3) return; const name = letters.join(''); ls.set('name', name); showTable({ name, score }); }
 function share() { // phones: native share sheet; desktop: copy the text + link (desktop Chrome's share promise can hang headless and is less useful anyway)
-  const text = `Hice ${score} puntos en Cóndor de los Andes 🦅 ¿me superas?`, url = location.origin + location.pathname;
+  const text = `Hice ${score} punto${score === 1 ? '' : 's'} en Cóndor de los Andes 🦅 ¿me superas?`, url = location.origin + location.pathname;
   const copy = () => navigator.clipboard.writeText(text + ' ' + url).then(() => { copied = 1.5; }, () => {});
   if (matchMedia('(pointer:coarse)').matches && navigator.share) return navigator.share({ title: 'Cóndor de los Andes', text, url }).catch(e => e.name !== 'AbortError' && copy());
   return copy();
