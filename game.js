@@ -31,8 +31,8 @@ let best = +ls.get('best') || 0, letters, idx, top, mine;
 addEventListener('resize', fit); fit();
 const clouds = [[0, 32, 2, 8], [160, 20, 2, 5], [250, 56, 2, 11], [340, 24, 1, 14]].map(([x, y, s, v]) => ({ x: x % W, y, s, v }));
 
-function startPlay() {
-  state = 'play'; mode = 'normal';
+function startPlay() { // 'ready': hover with the world scrolling until the first tap, which becomes the first flap
+  state = 'ready'; mode = 'normal';
   y = GROUND / 2 - 16; vy = 0; flapT = 0; invul = 0; speed = 2; score = 0; coins = 0; pairs = []; flash = 0; banner = 0;
 }
 
@@ -92,12 +92,13 @@ async function showTable(entry) { // top: undefined = loading, null = offline, a
 // ---- simulation ----
 function step() {
   t += 1 / 60; frame++;
-  const adv = state === 'play' ? speed : 1;
+  const adv = state === 'play' || state === 'ready' ? speed : 1;
   dist += adv;
   clouds.forEach(c => { c.x -= adv * 0.15 + c.v * 0.01; if (c.x < -60) c.x += W + 120; });
   if (flash > 0) flash -= 1 / 60;
   if (banner > 0) banner -= 1 / 60;
   if (invul > 0) invul -= 1 / 60;
+  if (state === 'ready') y = GROUND / 2 - 16 + Math.sin(t * 4) * 3;
   if (state !== 'play') return;
 
   vy = Math.min(vy + 0.35, 8); y += vy;
@@ -216,6 +217,7 @@ function draw() {
     text('SCORE ' + score, hx, hy, th.hud, 8, 'left');
     for (let i = 0; i < 5; i++) { ctx.fillStyle = i < coins ? PAL.normal.y : 'rgba(255,255,255,.25)'; ctx.fillRect(hx + i * 12, hy + 14, 9, 9); }
     if (u) text('ULTRA ANDES', hx, hy + 30, '#ff2a6d', 8, 'left');
+    if (state === 'ready' && t % 1 < 0.6) text('TAP TO FLY', W / 2, GROUND / 2 + 40, '#fff', 8);
   }
   if (u) { ctx.fillStyle = 'rgba(0,0,0,.22)'; for (let sy = 0; sy < H; sy += 2) ctx.fillRect(0, sy, W, 1); }
   if (flash > 0) { ctx.fillStyle = `rgba(255,255,255,${flash / 0.4})`; ctx.fillRect(0, 0, W, H); }
@@ -229,7 +231,10 @@ function advance() { if (++idx < 3) return; const name = letters.join(''); ls.se
 function tap(gx, gy) {
   if (state === 'title') startPlay();
   else if (state === 'table') { if (top !== undefined) startPlay(); }
-  else if (state === 'play') { vy = -5.2; flapT = 7; }
+  else if (state === 'ready' || state === 'play') {
+    if (state === 'ready') { state = 'play'; spawnPair(Math.max(W + 40, CX + 60 + 120 * speed)); } // first pair is >= 2 s away
+    vy = -5.2; flapT = 7;
+  }
   else if (state === 'gameover') {
     const lx = W / 2 - 36 + idx * 30 + 1, o = oy();
     if (gy > o + 170 && Math.abs(gx - W / 2) < 24) return showTable(null);
