@@ -26,7 +26,7 @@ const ls = { get: k => localStorage.getItem('condor.' + k), set: (k, v) => local
 
 // ---- state ----
 let state = 'title', mode = 'normal', t = 0, dist = 0, frame = 0;
-let y, vy, flapT, invul, speed, score, coins, pairs, nth, flash, flashRGB, banner, bannerLost, wait = 0; // wait: seconds of ignored input
+let y, vy, flapT, invul, speed, score, coins, pairs, nth, flash, flashRGB, banner, bannerLost, wait = 0, copied = 0; // wait: seconds of ignored input
 let best = +ls.get('best') || 0, letters, idx, top, mine;
 addEventListener('resize', fit); fit();
 const clouds = [[0, 32, 2, 8], [160, 20, 2, 5], [250, 56, 2, 11], [340, 24, 1, 14]].map(([x, y, s, v]) => ({ x: x % W, y, s, v }));
@@ -69,10 +69,11 @@ function hitsMountain(p, hb) {
 function enterUltra() {
   coins = 0; flashRGB = '255,255,255';
   if (mode === 'ultra') { flash = 0.15; return; }
-  mode = 'ultra'; flash = 0.4; banner = 1.1; bannerLost = false;
+  mode = 'ultra'; flash = 0.4; banner = 1.1; bannerLost = false; navigator.vibrate?.(30);
 }
 function hitRock() {
   if (invul > 0) return;
+  navigator.vibrate?.(30);
   if (mode === 'ultra') { mode = 'normal'; coins = 0; invul = 1; banner = 0.8; bannerLost = true; flash = 0.25; flashRGB = '255,42,109'; } else gameOver();
 }
 function gameOver() { // fatal hit: flash, the condor drops with no input (<= 0.6 s), then endScreen()
@@ -104,6 +105,7 @@ function step() {
   if (banner > 0) banner -= 1 / 60;
   if (invul > 0) invul -= 1 / 60;
   if (wait > 0) wait -= 1 / 60;
+  if (copied > 0) copied -= 1 / 60;
   if (state === 'ready') y = GROUND / 2 - 16 + Math.sin(t * 4) * 3;
   if (state === 'dead') {
     vy = Math.min(vy + 0.35, 8); y += vy;
@@ -185,29 +187,49 @@ function text(s, x, yy, col, size = 8, align = 'center') {
   ctx.font = `${size}px "Press Start 2P", monospace`; ctx.fillStyle = col; ctx.textAlign = align; ctx.textBaseline = 'top'; ctx.fillText(s, x, yy);
 }
 function dim() { ctx.fillStyle = 'rgba(0,0,0,.55)'; ctx.fillRect(0, 0, W, H); }
-const oy = () => (H - 216) / 2 | 0; // panels are laid out for 216 rows and centred vertically
-function drawGameOver() {
-  dim(); const o = oy();
-  text('GAME OVER', W / 2, o + 30, '#ff2a6d', 16); text('PUNTOS ' + score, W / 2, o + 60, '#fff'); text('MEJOR  ' + best, W / 2, o + 74, '#ffd93b');
-  text('TU NOMBRE', W / 2, o + 100, '#fff', 6);
-  letters.forEach((ch, i) => { const x = W / 2 - 36 + i * 30, col = i === idx ? '#ffd93b' : '#fff'; ctx.fillStyle = col; ctx.fillRect(x - 10, o + 140, 22, 2); text(ch, x + 1, o + 118, col, 16); });
-  text('TOCA ▲▼ PARA CAMBIAR', W / 2, o + 160, '#aaa', 6); text('SALTAR', W / 2, o + 176, '#aaa', 6);
+const oy = () => (H - 216) / 2 | 0; // the title is laid out for 216 rows and centred vertically
+const BTN = () => Math.max(16, Math.ceil(44 / scale)); // tap targets are >= 44 CSS px tall
+const hit = (gx, gy, x, yy, w, h) => gx >= x && gx < x + w && gy >= yy && gy < yy + h;
+function btn(label, x, yy, w, h, col) {
+  ctx.fillStyle = 'rgba(255,255,255,.15)'; ctx.fillRect(x, yy, w, h); ctx.fillStyle = col; ctx.fillRect(x, yy + h - 2, w, 2);
+  text(label, x + w / 2, yy + (h - 8) / 2 | 0, col);
 }
+// name entry: ▲ / ▼ zones (26 rows each) around the active letter, OK / SALTAR buttons; everything relative to m = H/2
+function drawGameOver() {
+  dim(); const m = H / 2 | 0, b = BTN();
+  text('GAME OVER', W / 2, m - 78, '#ff2a6d', 16); text('PUNTOS ' + score, W / 2, m - 56, '#fff'); text('MEJOR  ' + best, W / 2, m - 44, '#ffd93b');
+  text('TU NOMBRE', W / 2, m - 28, '#fff', 6);
+  letters.forEach((ch, i) => {
+    const x = W / 2 - 30 + i * 30, on = i === idx, col = on ? '#ffd93b' : '#fff';
+    text(ch, x, m - 2, col, 16); ctx.fillStyle = col; ctx.fillRect(x - 11, m + 16, 22, 2);
+    if (on) { text('▲', x, m - 16, col); text('▼', x, m + 22, col); }
+  });
+  text('TOCA ▲▼ PARA CAMBIAR', W / 2, m + 34, '#aaa', 6);
+  btn('OK', W / 2 - 60, m + 44, 56, b, '#ffd93b'); ctx.fillStyle = '#ffd93b';
+  for (let i = 0; i < 4; i++) ctx.fillRect(W / 2 - 18 + i, m + 44 + (b - 7) / 2 + i | 0, 1, 7 - 2 * i); // ▶ (not in the font)
+  btn('SALTAR', W / 2 + 4, m + 44, 56, b, '#aaa');
+}
+let shareY = 0; // y of the COMPARTIR button, set by drawTable for tap()
 function drawTable() {
-  dim(); const o = oy();
-  text('TOP CONDORES', W / 2, o + 16, '#ffd93b', 12);
-  if (top === undefined) text('CARGANDO...', W / 2, o + 100, '#fff');
-  else if (top === null) { text('SIN CONEXIÓN', W / 2, o + 90, '#ff2a6d'); text('MEJOR ' + best, W / 2, o + 110, '#fff'); }
+  dim(); const b = BTN(), rh = H >= 216 ? 13 : 10;
+  const tu = mine && top && !top.some(e => e.name === mine.name && e.score === mine.score); // did not make the top 10
+  let yy = (H - (18 + 10 * rh + (tu ? 12 : 0) + b + 22)) / 2 | 0; // title 18, rows, TU line, button + 4 above / 12 below, hint 6
+  text('TOP CONDORES', W / 2, yy, '#ffd93b', 12); yy += 18;
+  if (top === undefined) text('CARGANDO...', W / 2, yy + 40, '#fff');
+  else if (top === null) { text('SIN CONEXIÓN', W / 2, yy + 36, '#ff2a6d'); text('MEJOR ' + best, W / 2, yy + 56, '#fff'); }
   else {
     let hl = -1;
     top.forEach((e, i) => {
       const me = hl < 0 && mine && e.name === mine.name && e.score === mine.score; if (me) hl = i;
       const col = me ? '#00f0ff' : '#fff';
-      text(String(i + 1).padStart(2, ' ') + '  ' + e.name, W / 2 - 70, o + 44 + i * 13, col, 8, 'left');
-      text(String(e.score), W / 2 + 70, o + 44 + i * 13, col, 8, 'right');
+      text(String(i + 1).padStart(2, ' ') + '  ' + e.name, W / 2 - 70, yy + i * rh, col, 8, 'left');
+      text(String(e.score), W / 2 + 70, yy + i * rh, col, 8, 'right');
     });
   }
-  if (top !== undefined && t % 1 < 0.6) text('TOCA PARA VOLAR DE NUEVO', W / 2, o + 190, '#fff', 6);
+  yy += 10 * rh;
+  if (tu) { text('TU: ' + mine.name + '  ' + mine.score, W / 2, yy, '#00f0ff'); yy += 12; }
+  shareY = yy + 4; btn(copied > 0 ? 'COPIADO' : 'COMPARTIR', W / 2 - 50, shareY, 100, b, '#ffd93b'); yy += b + 12;
+  if (top !== undefined && t % 1 < 0.6) text('TOCA PARA VOLAR DE NUEVO', W / 2, yy, '#fff', 6);
 }
 function draw() {
   const u = mode === 'ultra', th = THEME[u ? 'ultra' : 'normal'];
@@ -217,8 +239,9 @@ function draw() {
     drawCondor(th, W / 2 - 48, (o + 40 + Math.sin(t * 2) * 6) | 0, (t % 1.2) < 0.15 ? FLAP : GLIDE, 3);
     text('CONDOR', W / 2, o + 130, '#fff', 16); ctx.fillRect(W / 2 - 27, o + 123, 5, 2); ctx.fillRect(W / 2 - 29, o + 125, 5, 2); // accent on the O
     text('DE LOS ANDES', W / 2, o + 150, '#ffd93b', 8);
-    text('5 MONEDAS = ULTRA ANDES', W / 2, o + 166, '#fff', 6);
-    if (t % 1 < 0.6) text('TOCA PARA VOLAR', W / 2, o + 182, '#fff', 6);
+    if (best > 0) text('MEJOR: ' + best, W / 2, o + 164, '#ffd93b', 6);
+    text('5 MONEDAS = ULTRA ANDES', W / 2, o + 174, '#fff', 6);
+    if (t % 1 < 0.6) text('TOCA PARA VOLAR', W / 2, o + 186, '#fff', 6);
   } else {
     pairs.forEach(p => {
       const px = p.x | 0;
@@ -246,19 +269,25 @@ function draw() {
 // ---- input (dispatched per state) ----
 function cycle(d) { letters[idx] = LETTERS[(LETTERS.indexOf(letters[idx]) + d + LETTERS.length) % LETTERS.length]; }
 function advance() { if (++idx < 3) return; const name = letters.join(''); ls.set('name', name); showTable({ name, score }); }
-function tap(gx, gy) {
+function share() { // phones: native share sheet; desktop: copy the text + link (desktop Chrome's share promise can hang headless and is less useful anyway)
+  const text = `Hice ${score} puntos en Cóndor de los Andes 🦅 ¿me superas?`, url = location.origin + location.pathname;
+  const copy = () => navigator.clipboard.writeText(text + ' ' + url).then(() => { copied = 1.5; }, () => {});
+  if (matchMedia('(pointer:coarse)').matches && navigator.share) return navigator.share({ title: 'Cóndor de los Andes', text, url }).catch(e => e.name !== 'AbortError' && copy());
+  return copy();
+}
+function tap(gx, gy) { // gx/gy: logical px; -1,-1 from the keyboard (hits no button)
   if (wait > 0) return;
   if (state === 'title') startPlay();
-  else if (state === 'table') { if (top !== undefined) startPlay(); }
+  else if (state === 'table') { if (hit(gx, gy, W / 2 - 50, shareY, 100, BTN())) share(); else if (top !== undefined) startPlay(); }
   else if (state === 'ready' || state === 'play') {
     if (state === 'ready') { state = 'play'; spawnPair(Math.max(W + 40, CX + 60 + 120 * speed)); } // first pair is >= 2 s away
     vy = -5.2; flapT = 7;
   }
-  else if (state === 'gameover') {
-    const lx = W / 2 - 36 + idx * 30 + 1, o = oy();
-    if (gy > o + 170 && Math.abs(gx - W / 2) < 24) return showTable(null);
-    if (Math.abs(gx - lx) < 12 && gy > o + 110 && gy < o + 142) return cycle(gy < o + 126 ? 1 : -1);
-    advance();
+  else if (state === 'gameover') { // only the drawn targets act; stray taps do nothing
+    const m = H / 2 | 0, b = BTN(), i = Math.round((gx - W / 2) / 30) + 1;
+    if (hit(gx, gy, W / 2 - 60, m + 44, 56, b)) advance();
+    else if (hit(gx, gy, W / 2 + 4, m + 44, 56, b)) showTable(null);
+    else if (i >= 0 && i < 3 && gy >= m - 20 && gy < m + 32) { if (i !== idx) idx = i; else cycle(gy < m + 6 ? 1 : -1); }
   }
 }
 addEventListener('pointerdown', e => { e.preventDefault(); const r = cv.getBoundingClientRect(); tap((e.clientX - r.x) / r.width * W, (e.clientY - r.y) / r.height * H); });
@@ -269,7 +298,7 @@ addEventListener('keydown', e => {
   if (state === 'gameover') {
     if (e.code === 'ArrowUp') cycle(1); else if (e.code === 'ArrowDown') cycle(-1);
     else if (e.code === 'Escape') showTable(null); else advance();
-  } else if (e.code !== 'ArrowDown' && e.code !== 'Escape') tap(W / 2, 0);
+  } else if (e.code !== 'ArrowDown' && e.code !== 'Escape') tap(-1, -1);
 });
 
 // ---- loop: fixed 60 Hz steps, capped at ~6 per frame ----
