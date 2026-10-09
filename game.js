@@ -188,16 +188,16 @@ function dim() { ctx.fillStyle = 'rgba(0,0,0,.55)'; ctx.fillRect(0, 0, W, H); }
 const oy = () => (H - 216) / 2 | 0; // panels are laid out for 216 rows and centred vertically
 function drawGameOver() {
   dim(); const o = oy();
-  text('GAME OVER', W / 2, o + 30, '#ff2a6d', 16); text('SCORE  ' + score, W / 2, o + 60, '#fff'); text('BEST   ' + best, W / 2, o + 74, '#ffd93b');
-  text('ENTER YOUR NAME', W / 2, o + 100, '#fff', 6);
+  text('GAME OVER', W / 2, o + 30, '#ff2a6d', 16); text('PUNTOS ' + score, W / 2, o + 60, '#fff'); text('MEJOR  ' + best, W / 2, o + 74, '#ffd93b');
+  text('TU NOMBRE', W / 2, o + 100, '#fff', 6);
   letters.forEach((ch, i) => { const x = W / 2 - 36 + i * 30, col = i === idx ? '#ffd93b' : '#fff'; ctx.fillStyle = col; ctx.fillRect(x - 10, o + 140, 22, 2); text(ch, x + 1, o + 118, col, 16); });
-  text('UP/DOWN LETTER   TAP NEXT', W / 2, o + 160, '#aaa', 6); text('SKIP', W / 2, o + 176, '#aaa', 6);
+  text('TOCA ▲▼ PARA CAMBIAR', W / 2, o + 160, '#aaa', 6); text('SALTAR', W / 2, o + 176, '#aaa', 6);
 }
 function drawTable() {
   dim(); const o = oy();
   text('TOP CONDORES', W / 2, o + 16, '#ffd93b', 12);
-  if (top === undefined) text('LOADING...', W / 2, o + 100, '#fff');
-  else if (top === null) { text('OFFLINE', W / 2, o + 90, '#ff2a6d'); text('BEST ' + best, W / 2, o + 110, '#fff'); }
+  if (top === undefined) text('CARGANDO...', W / 2, o + 100, '#fff');
+  else if (top === null) { text('SIN CONEXIÓN', W / 2, o + 90, '#ff2a6d'); text('MEJOR ' + best, W / 2, o + 110, '#fff'); }
   else {
     let hl = -1;
     top.forEach((e, i) => {
@@ -207,7 +207,7 @@ function drawTable() {
       text(String(e.score), W / 2 + 70, o + 44 + i * 13, col, 8, 'right');
     });
   }
-  if (top !== undefined && t % 1 < 0.6) text('TAP TO FLY AGAIN', W / 2, o + 190, '#fff', 6);
+  if (top !== undefined && t % 1 < 0.6) text('TOCA PARA VOLAR DE NUEVO', W / 2, o + 190, '#fff', 6);
 }
 function draw() {
   const u = mode === 'ultra', th = THEME[u ? 'ultra' : 'normal'];
@@ -215,9 +215,10 @@ function draw() {
   if (state === 'title') {
     const o = oy();
     drawCondor(th, W / 2 - 48, (o + 40 + Math.sin(t * 2) * 6) | 0, (t % 1.2) < 0.15 ? FLAP : GLIDE, 3);
-    text('CÓNDOR', W / 2, o + 130, '#fff', 16); text('DE LOS ANDES', W / 2, o + 150, '#ffd93b', 8);
+    text('CONDOR', W / 2, o + 130, '#fff', 16); ctx.fillRect(W / 2 - 27, o + 123, 5, 2); ctx.fillRect(W / 2 - 29, o + 125, 5, 2); // accent on the O
+    text('DE LOS ANDES', W / 2, o + 150, '#ffd93b', 8);
     text('5 MONEDAS = ULTRA ANDES', W / 2, o + 166, '#fff', 6);
-    if (t % 1 < 0.6) text('TAP / SPACE TO FLY', W / 2, o + 182, '#fff', 6);
+    if (t % 1 < 0.6) text('TOCA PARA VOLAR', W / 2, o + 182, '#fff', 6);
   } else {
     pairs.forEach(p => {
       const px = p.x | 0;
@@ -226,19 +227,19 @@ function draw() {
     });
     if (!(invul > 0 && (frame >> 2) & 1)) drawCondor(th, CX, y | 0, flapT > 0 ? FLAP : GLIDE);
     const hx = 8 + SAL | 0, hy = 8 + SAT | 0;
-    text('SCORE ' + score, hx, hy, th.hud, 8, 'left');
+    text('PUNTOS ' + score, hx, hy, th.hud, 8, 'left');
     for (let i = 0; i < 5; i++) { ctx.globalAlpha = i < coins ? 1 : 0.3; drawSprite(ctx, COIN, PAL[u ? 'ultra' : 'normal'], hx + i * 14, hy + 13); }
     ctx.globalAlpha = 1; text('ULTRA', hx + 72, hy + 16, th.hud, 6, 'left');
     if (u) text('ULTRA ANDES', hx, hy + 30, '#ff2a6d', 8, 'left');
     if (state === 'ready') {
-      if (t % 1 < 0.6) text('TAP TO FLY', W / 2, GROUND / 2 + 40, '#fff', 8);
+      if (t % 1 < 0.6) text('TOCA PARA VOLAR', W / 2, GROUND / 2 + 40, '#fff', 8);
       text('5 MONEDAS = ULTRA ANDES', W / 2, GROUND / 2 + 56, '#ffd93b', 6);
     }
   }
   if (u) { ctx.fillStyle = 'rgba(0,0,0,.22)'; for (let sy = 0; sy < H; sy += 2) ctx.fillRect(0, sy, W, 1); }
   if (flash > 0) { ctx.fillStyle = `rgba(${flashRGB},${flash / 0.4})`; ctx.fillRect(0, 0, W, H); }
   if (banner > 0 && bannerLost) text('ULTRA PERDIDO', W / 2, H / 2 - 6, '#ff2a6d', 12);
-  else if (banner > 0) { const k = Math.min(1, (1.1 - banner) / 0.25); text('ULTRA ANDES', W / 2, (H / 2 - 8 - (1 - k) * 20) | 0, '#ff2a6d', 16); text('x2 SCORE', W / 2, H / 2 + 14, '#00f0ff', 8); }
+  else if (banner > 0) { const k = Math.min(1, (1.1 - banner) / 0.25); text('ULTRA ANDES', W / 2, (H / 2 - 8 - (1 - k) * 20) | 0, '#ff2a6d', 16); text('x2 PUNTOS', W / 2, H / 2 + 14, '#00f0ff', 8); }
   if (state === 'gameover') drawGameOver(); else if (state === 'table') drawTable();
 }
 
