@@ -77,8 +77,8 @@ function hitRock() {
   navigator.vibrate?.(30);
   if (mode === 'ultra') { mode = 'normal'; coins = 0; invul = 1; banner = 0.8; bannerLost = true; flash = 0.25; flashRGB = '255,42,109'; } else gameOver();
 }
-function gameOver() { // fatal hit: flash, the condor drops with no input (<= 0.6 s), then endScreen()
-  state = 'dead'; mode = 'normal'; banner = 0; flash = 0.15; flashRGB = '255,255,255'; wait = 0.6;
+function gameOver() { // fatal hit: flash, the condor drops to the ground with no input, then endScreen()
+  state = 'dead'; mode = 'normal'; banner = 0; flash = 0.15; flashRGB = '255,255,255'; wait = 1.3; // panel 0.1 s after landing (step), 1.3 s at most
   if (score > best) { best = score; ls.set('best', best); }
 }
 function endScreen() {
