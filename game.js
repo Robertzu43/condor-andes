@@ -38,9 +38,9 @@ function startPlay() { // 'ready': hover with the world scrolling until the firs
 }
 
 // ---- mountains ----
-function ridge(h, hw) { // half-width per row, from the base up; random walk on the base width, tapered so the tip never grows a needle
+function ridge(h, hw) { // half-width per row, from the base up; random walk (|j| <= 0.3 hw) on the base width, tapered; floor 3 except the last 6 rows
   const rows = []; let j = 0;
-  for (let i = 0; i < h; i++) { j += rnd(-0.8, 0.8); rows.push(Math.max(1, Math.round((hw + j) * (h - i) / h))); }
+  for (let i = 0; i < h; i++) { j = Math.max(-0.3 * hw, Math.min(0.3 * hw, j + rnd(-0.8, 0.8))); rows.push(Math.max(h - i > 6 ? 3 : 1, Math.round((hw + j) * (h - i) / h))); }
   return rows;
 }
 function spawnPair(x) { // gap 92 for the first three pairs, then -2.5 per pair down to 64
