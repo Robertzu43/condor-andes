@@ -19,7 +19,7 @@ Flappy-style pixel game for Hack the Andes. Works on phone and desktop.
 - `npm test` — unit checks (`node --test`)
 - `npm run dev` — local Cloudflare Pages server with local KV at http://localhost:8788
 - `npm run deploy` — deploy to Cloudflare Pages
-- `node scripts/make-images.mjs` — regenerate `og.png`, `favicon.png`, `apple-touch-icon.png` from the pixel art (no deps)
+- `sh scripts/make-cover.sh` — regenerate `og.png`, `favicon.png`, `apple-touch-icon.png` from the pixel art (no deps)
 
 Leaderboard lives in KV (`SCORES` binding, key `top`). Reset the production leaderboard:
 

@@ -237,6 +237,7 @@ function draw() {
   drawBg(th, u);
   if (state === 'title') {
     const o = oy();
+    circle(W / 2, o + 82, 44, '#1a1a1a'); circle(W / 2, o + 82, 42, th.sun); circle(W / 2, o + 82, 33, th.sunCore); // logo badge behind the condor
     drawCondor(th, W / 2 - 48, (o + 40 + Math.sin(t * 2) * 6) | 0, (t % 1.2) < 0.15 ? FLAP : GLIDE, 3);
     text('CONDOR', W / 2, o + 130, '#fff', 16); ctx.fillRect(W / 2 - 27, o + 123, 5, 2); ctx.fillRect(W / 2 - 29, o + 125, 5, 2); // accent on the O
     text('DE LOS ANDES', W / 2, o + 150, '#ffd93b', 8);

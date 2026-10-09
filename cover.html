@@ -1,0 +1,41 @@
+<!doctype html>
+<!-- Cover + logo generator. Rendered by scripts/make-cover.sh into og.png / logo.png / favicon.png / apple-touch-icon.png -->
+<html><head><meta charset="utf-8">
+<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+<style>html,body{margin:0;background:#000}canvas{display:block;image-rendering:pixelated}</style></head>
+<body><canvas id="c"></canvas>
+<script type="module">
+import { GLIDE, PAL, THEME } from './sprites.js';
+const q = new URLSearchParams(location.search), kind = q.get('kind') || 'cover', size = +q.get('size') || 512;
+const t = THEME.normal, c = document.getElementById('c'), ctx = c.getContext('2d');
+const px = (rows, pal, x, y, s) => rows.forEach((row, ry) => [...row].forEach((ch, rx) => { if (pal[ch]) { ctx.fillStyle = pal[ch]; ctx.fillRect(x + rx * s, y + ry * s, s, s); } }));
+function disc(cx, cy, r, col, s) { ctx.fillStyle = col; for (let dy = 1 - r; dy < r; dy++) { const w = Math.floor(Math.sqrt(r * r - dy * dy)); ctx.fillRect(cx - w * s, cy + dy * s, (2 * w + 1) * s, s); } }
+function rays(cx, cy, r0, r1, s, n = 12) { ctx.fillStyle = t.sun; for (let a = 0; a < n; a++) { const ang = a * Math.PI * 2 / n - Math.PI / 2; for (let r = r0; r < r1; r++) ctx.fillRect(cx + Math.round(Math.cos(ang) * r) * s, cy + Math.round(Math.sin(ang) * r) * s, s * 2, s * 2); } }
+function tri(col, x, base, h, hw) { ctx.fillStyle = col; for (let i = 0; i < h; i++) { const w = Math.max(1, Math.round(hw * (h - i) / h)); ctx.fillRect(x - w, base - i, 2 * w, 1); } }
+function text(s, x, y, size, col, shadow) { ctx.font = `${size}px "Press Start 2P"`; ctx.textAlign = 'center'; ctx.textBaseline = 'top'; if (shadow) { ctx.fillStyle = shadow; ctx.fillText(s, x + size / 8, y + size / 8); } ctx.fillStyle = col; ctx.fillText(s, x, y); }
+
+await document.fonts.load('10px "Press Start 2P"');
+if (kind === 'cover') {
+  c.width = 1200; c.height = 630;
+  const g = ctx.createLinearGradient(0, 0, 0, 630); g.addColorStop(0, t.sky0); g.addColorStop(1, t.sky1); ctx.fillStyle = g; ctx.fillRect(0, 0, 1200, 630);
+  // sun with rays, condor silhouetted across it
+  rays(600, 215, 48, 60, 3); disc(600, 215, 46, t.sun, 3); disc(600, 215, 36, t.sunCore, 3);
+  // far mountains + ground
+  for (let x = -60; x < 1300; x += 210) tri(t.far2, x, 590, 180 + (x / 210 | 0) % 3 * 45, 165);
+  for (let x = 40; x < 1300; x += 165) tri(t.far, x, 590, 90 + (x / 165 | 0) % 2 * 60, 135);
+  ctx.fillStyle = t.ground; ctx.fillRect(0, 590, 1200, 40); ctx.fillStyle = t.groundDark; for (let x = 0; x < 1200; x += 60) ctx.fillRect(x, 599, 15, 6);
+  px(GLIDE, PAL.normal, 600 - 16 * 9 + 20, 215 - 16 * 9 + 30, 9);
+  // title: CONDOR + painted accent (font has no Ó)
+  text('CONDOR', 600, 440, 72, '#ffffff', '#1a1a1a'); ctx.fillStyle = '#1a1a1a'; ctx.fillRect(492, 427, 12, 9); ctx.fillRect(501, 418, 12, 9); ctx.fillStyle = '#ffffff'; ctx.fillRect(483, 427, 12, 9); ctx.fillRect(492, 418, 12, 9);
+  text('DE LOS ANDES', 600, 530, 30, t.sun, '#1a1a1a');
+} else {
+  // logo badge: sun disc + condor on a 48-px grid, upscaled nearest-neighbour (favicon / apple-touch-icon / logo.png)
+  c.width = c.height = size; const off = document.createElement('canvas'); off.width = off.height = 48; const o = off.getContext('2d');
+  const g = o.createLinearGradient(0, 0, 0, 48); g.addColorStop(0, t.sky0); g.addColorStop(1, t.sky1); o.fillStyle = g; o.fillRect(0, 0, 48, 48);
+  const d = (r, col) => { o.fillStyle = col; for (let dy = 1 - r; dy < r; dy++) { const w = Math.floor(Math.sqrt(r * r - dy * dy)); o.fillRect(24 - w, 24 + dy, 2 * w + 1, 1); } };
+  d(23, '#1a1a1a'); d(21, t.sun); d(16, t.sunCore);
+  GLIDE.forEach((row, ry) => [...row].forEach((ch, rx) => { if (PAL.normal[ch]) { o.fillStyle = PAL.normal[ch]; o.fillRect(9 + rx, 10 + ry, 1, 1); } }));
+  ctx.imageSmoothingEnabled = false; ctx.drawImage(off, 0, 0, size, size);
+}
+document.title = 'done';
+</script></body></html>
