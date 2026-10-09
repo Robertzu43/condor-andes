@@ -1,13 +1,16 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { validate, mergeTop } from './scores.js';
+import { validate, mergeTop, onRequest } from './scores.js';
+
+test('other methods get 405', () => assert.equal(onRequest().status, 405));
 
 test('validate cleans name and bounds score', () => {
   assert.deepEqual(validate({ name: 'rz-u!', score: 42 }), { name: 'RZU', score: 42 });
   assert.deepEqual(validate({ name: 'ROBERTO', score: 1 }), { name: 'ROB', score: 1 });
   assert.equal(validate({ name: '', score: 5 }), null);
   assert.equal(validate({ name: 'AAA', score: 0 }), null);
-  assert.equal(validate({ name: 'AAA', score: 10000 }), null);
+  assert.deepEqual(validate({ name: 'AAA', score: 2000 }), { name: 'AAA', score: 2000 });
+  assert.equal(validate({ name: 'AAA', score: 2001 }), null);
   assert.equal(validate({ name: 'AAA', score: 1.5 }), null);
   assert.equal(validate(null), null);
 });

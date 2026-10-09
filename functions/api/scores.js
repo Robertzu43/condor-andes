@@ -3,7 +3,7 @@ const KEY = 'top';
 export function validate(b) {
   const name = String(b?.name ?? '').toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 3);
   const score = b?.score;
-  if (!name || !Number.isInteger(score) || score < 1 || score > 9999) return null;
+  if (!name || !Number.isInteger(score) || score < 1 || score > 2000) return null; // ponytail: plausibility cap, not anti-cheat
   return { name, score };
 }
 
@@ -25,3 +25,5 @@ export async function onRequestPost({ request, env }) {
   await env.SCORES.put(KEY, JSON.stringify(top)); // ponytail: read-modify-write can race; Durable Object if it ever matters
   return json(top);
 }
+
+export const onRequest = () => json({ error: 'method not allowed' }, 405); // any method without a specific handler above
