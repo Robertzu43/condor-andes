@@ -12,8 +12,8 @@ function fit() {
   W = portrait ? 216 : 384; CX = portrait ? 56 : 70;
   H = portrait ? Math.min(480, Math.max(216, Math.round(216 * ih / iw))) : Math.min(216, Math.max(176, Math.round(384 * ih / iw)));
   GROUND = H - 24;
-  const s = Math.min(iw / W, ih / H);
-  scale = matchMedia('(pointer:coarse)').matches ? s : Math.floor(s) || s; // phones fill the screen, desktops keep integer pixels
+  const s = Math.min(iw / W, ih / H), f = Math.floor(s);
+  scale = !matchMedia('(pointer:coarse)').matches && f / s >= 0.8 ? f : s; // desktops keep integer pixels unless that wastes >20% of the window; phones always fill
   cv.width = W; cv.height = H; ctx.imageSmoothingEnabled = false;
   cv.style.width = W * scale + 'px'; cv.style.height = H * scale + 'px';
   const sa = k => (parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--sa' + k)) || 0) / scale;
