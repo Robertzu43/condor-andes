@@ -43,7 +43,9 @@ function ridge(h, hw) { // half-width per row, from the base up; random walk on 
   return rows;
 }
 function spawnPair(x) { // gap 92 for the first three pairs, then -2.5 per pair down to 64
-  const gap = Math.round(Math.max(64, 92 - 2.5 * Math.max(0, nth++ - 3)) + rnd(0, 6)), gapY = rnd(16, GROUND - 16 - gap) | 0, hw = rnd(18, 32) | 0;
+  const gap = Math.round(Math.max(64, 92 - 2.5 * Math.max(0, nth++ - 3)) + rnd(0, 6)), hw = rnd(18, 32) | 0, prev = pairs[pairs.length - 1];
+  const c0 = prev ? prev.gapY + prev.gap / 2 : y + 16; // the gap centre drifts <= 100 px per pair: tall portrait fields stay climbable
+  const gapY = Math.max(16, Math.min(GROUND - 16 - gap, c0 + rnd(-100, 100) - gap / 2)) | 0;
   pairs.push({ x, gap, gapY, hw, bot: ridge(GROUND - gapY - gap, hw), top: ridge(gapY, hw), next: rnd(90, 155) | 0, coin: true, passed: false });
 }
 function drawMountain(th, x, rows, flip) {
