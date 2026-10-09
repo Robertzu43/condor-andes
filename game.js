@@ -242,3 +242,6 @@ function loop(now) {
   draw(); requestAnimationFrame(loop);
 }
 requestAnimationFrame(loop);
+
+// QA hook: only when the page is opened with #debug
+if (location.hash === '#debug') window.condor = { startPlay, enterUltra, gameOver, get state() { return state; }, get mode() { return mode; }, get score() { return score; } };
