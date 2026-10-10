@@ -317,8 +317,9 @@ function loop(now) {
 }
 requestAnimationFrame(loop);
 
-// QA hook: only when the page is opened with #debug
-if (location.hash === '#debug') {
+// QA hook: available only on loopback development hosts, never in production.
+const DEBUG_HOSTS = new Set(['localhost', '127.0.0.1', '::1']);
+if (DEBUG_HOSTS.has(location.hostname) && location.hash === '#debug') {
   window.condor = { startPlay, enterUltra, gameOver };
   const peek = { state: () => state, mode: () => mode, score: () => score, y: () => y, vy: () => vy, invul: () => invul, flash: () => flash, banner: () => banner, coins: () => coins,
     pairs: () => pairs, top: () => top, letters: () => letters, idx: () => idx, best: () => best, frame: () => frame, W: () => W, H: () => H };
