@@ -49,7 +49,7 @@
 - **Phone-first** — portrait uses a tall 216-px-wide playfield that fills the screen; desktop is a crisp integer-scaled 384×216. Tap anywhere.
 - **Global leaderboard** — one Cloudflare Pages Function over a single KV key. Name sanitised, score plausibility-capped.
 - **Shareable** — Open Graph cover, favicon and app icon generated from the game's own sprites (`cover.html`).
-- **Zero dependencies, no build step** — three ES modules on one `<canvas>`.
+- **Zero runtime dependencies** — three ES modules on one `<canvas>`, copied into a minimal allowlisted deployment bundle.
 
 ## Project layout
 
@@ -60,6 +60,8 @@ sprites.js              pixel sprites (condor glide/flap, coin) + normal/ULTRA p
 functions/api/scores.js GET/POST /api/scores  (Cloudflare Pages Function, KV binding SCORES)
 cover.html              renders og.png / logo.png / icons from the sprites
 scripts/make-cover.sh   headless-Chrome runner for cover.html
+scripts/build.mjs       copies only public runtime assets into dist/
+_headers                Cloudflare Pages browser security headers
 docs/                   design spec, implementation plan, screenshots
 ```
 
@@ -67,12 +69,13 @@ docs/                   design spec, implementation plan, screenshots
 
 ```sh
 npm test                  # unit checks (node --test): sprites + leaderboard logic
+npm run build             # create the allowlisted static deployment in dist/
 npm run dev               # Cloudflare Pages dev server with local KV → http://localhost:8788
 npm run deploy            # wrangler pages deploy
 sh scripts/make-cover.sh  # regenerate og.png, logo.png, favicon.png, apple-touch-icon.png (needs Chrome)
 ```
 
-Open the game with `#debug` in the URL to get `window.condor` (state, mode, score, `startPlay()`, `enterUltra()`, `gameOver()`) for automation.
+On a loopback development host (`localhost`, `127.0.0.1`, or `::1`), open the game with `#debug` in the URL to get `window.condor` (state, mode, score, `startPlay()`, `enterUltra()`, `gameOver()`) for automation. Production hosts never expose this hook.
 
 **Leaderboard** lives in KV (`SCORES` binding, key `top`). Reset production:
 

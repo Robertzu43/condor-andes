@@ -2,5 +2,10 @@
   "name": "condor-andes",
   "private": true,
   "type": "module",
-  "scripts": { "test": "node --test", "dev": "npx wrangler@latest pages dev", "deploy": "npx wrangler@latest pages deploy" }
+  "scripts": {
+    "test": "node --test",
+    "build": "node scripts/build.mjs",
+    "dev": "npm run build && npx wrangler@latest pages dev",
+    "deploy": "npm run build && npx wrangler@latest pages deploy"
+  }
 }
